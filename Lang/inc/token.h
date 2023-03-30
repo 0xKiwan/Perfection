@@ -133,6 +133,34 @@ static const char* keyword_map[] = {
 };
 
 /**
+ * We can use this to map an integer to a symbol in the language
+*/
+static const char* symbol_map[] = {
+    "(",
+    ")",
+    "{",
+    "}",
+    ",",
+    ".",
+    ";",
+    ":",
+    "-",
+    "+",
+    "/",
+    "*",
+    "%",
+    "&",
+    "!",
+    "!=",
+    "=",
+    "==",
+    ">",
+    ">=",
+    "<",
+    "<="
+};
+
+/**
  * Represents a token parsed from src code.
  */
 typedef struct _perf_token_t

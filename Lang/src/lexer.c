@@ -111,6 +111,8 @@ perf_result_t token_array_resize(perf_token_t** out, int32_t* capacity)
             return PERF_RES_MEMORY_ALLOC_FAIL;
         }
     }
+
+    // Otherwise we need to resize it.
     else
     {
         // Reallocate memory for the token buffer.
@@ -305,7 +307,12 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
             // Check first for a single zero. This fixes an issue with defining zero numbers with our integer mode check.
             if (*lexer->current_ch == '0' && (*(lexer->current_ch + 1) == ' ' || *(lexer->current_ch + 1) == ';'))
             {
-                continue;
+                // Move to the next character.
+                lexer->column_number++;
+			    lexer->current_ch++;
+
+                // No further processing needed
+                break;
             }
 
             // Handle integer mode notation
@@ -507,8 +514,95 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
     return PERF_RES_OK;
 }
 
+/**
+ * @brief Handles any symbols in the source code.
+ * 
+ * @param lexer The lexer to use.
+ * @param token The token to use.
+ * 
+ * @return PERF_RES_OK if the symbol was handled successfully.
+*/
+perf_result_t perf_lexer_handle_symbol(perf_lexer_t* lexer, perf_token_t* token)
+{
+    // Get the current character.
+    char ch = *lexer->current_ch;
+
+    // Used to store the match index
+    int match_idx = -1;
+
+    // Used to determine if the symbol is 2x length
+    bool is_2x_length = false;
+
+    // Loop through the symbol map
+    for (int idx = 0; idx < 22; idx++)
+    {
+        // Get the symbol from the symbol list
+        const char* sym = symbol_map[idx];
+
+        // Check if we have a 2x length symbol
+        if (strlen(sym) == 2)
+        {
+            // Check for a match against the current character and the next character.
+            if (ch == sym[0] && *(lexer->current_ch + 1) == sym[1])
+            {
+                // Set the match index.
+                match_idx = idx;
+
+                // Set the 2x length flag.
+                is_2x_length = true;
+
+                // Break out of the loop.
+                break;
+            }
+        }
+
+        // Check if we have a 1x length symbol
+        else if (strlen(sym) == 1)
+        {
+            // Check for a match against the current character.
+            if (ch == sym[0])
+            {
+                // Set the match index.
+                match_idx = idx;
+
+                // Break out of the loop.
+                break;
+            }
+        }
+    }
+
+    // Check if we have a match
+    if (match_idx != -1)
+    {
+
+        // Construct the token
+        token->type             = (perf_e_token_type_t)match_idx;
+        token->line_number      = lexer->line_number;
+        token->column_number    = lexer->column_number;
+
+        // Move to the next character.
+        lexer->current_ch++;
+        lexer->column_number++;
+
+        // Check if the symbol is 2x length
+        if (is_2x_length)
+        {
+            // Move to the next character.
+            lexer->current_ch++;
+            lexer->column_number++;
+        }
+
+        // Return OK result.
+        return PERF_RES_OK;
+    }
+
+    // Return the error result.
+    return PERF_RES_LEX_ERROR;
+}
+
+
 // Implementation for lexer.h perf_lexer_digest
-perf_result_t perf_lexer_digest(perf_lexer_t *lexer, const char* src, perf_token_t **tokens, int32_t *token_count)
+perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token_t** tokens, int32_t* token_count)
 {
     // Save ptr to the start of the source code
     lexer->src = src;
@@ -630,12 +724,15 @@ perf_result_t perf_lexer_digest(perf_lexer_t *lexer, const char* src, perf_token
             // Handle everything else
             else
             {
-                switch (ch)
-                {
+                // Handle the symbol
+                perf_result_t parse_result = perf_lexer_handle_symbol(lexer, token);
 
-                }
+                // Check if the symbol was handled successfully.
+                if (parse_result != PERF_RES_OK) return parse_result;
             }
 
+            // Print the token
+            printf("Token: %s\n", token_map[token->type]);
         }
     }
 
