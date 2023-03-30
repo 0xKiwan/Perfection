@@ -4,6 +4,52 @@
 #include "../inc/lexer.h"
 
 
+/**
+ * Read the contents of a file.
+ * 
+ * @param path The path to the file.
+ * 
+ * @return The contents of the file.
+*/
+char* load_file(char const* path)
+{
+    // Will store the contents of the file
+    char* buffer = 0;
+
+    // Will store the length of the file
+    long length;
+
+    // Open handle to the file
+    FILE * f = fopen (path, "rb");
+
+    // Check if the file was opened successfully
+    if (f)
+    {
+        // Get the length of the file
+        fseek(f, 0, SEEK_END);
+
+        // Store the length of the file
+        length = ftell(f);
+
+        // Reset the file pointer
+        fseek (f, 0, SEEK_SET);
+
+        // Allocate memory for the file
+        buffer = (char*)malloc ((length+1)*sizeof(char));
+        
+        // Read the file into the buffer
+        if (buffer) fread (buffer, sizeof(char), length, f);
+
+        // Close the file
+        fclose (f);
+    }
+
+    // Null terminate the buffer
+    buffer[length] = '\0';
+
+    // Return the buffer
+    return buffer;
+}
 
 
 int main(int argc, char **argv) {
@@ -14,41 +60,8 @@ int main(int argc, char **argv) {
     // Check if we should parse file or cli
     if ( argc > 1 ) 
     {
-        // Open the file
-        FILE *file = fopen( argv[ 1 ], "r" );
-
-        // Check if the file was opened
-        if ( file == NULL )
-        {
-            // Print error
-            printf( "Could not open file '%s'.\n", argv[ 1 ] );
-
-            // Exit
-            return 1;
-        }
-
-        // Will store the file's contents
-        char *file_contents = NULL;
-
-        // Will store the file's size
-        size_t file_size = 0;
-
-        // Get the file's size
-        fseek( file, 0, SEEK_END );
-        file_size = ftell( file );
-        rewind( file );
-
-        // Allocate memory for the file's contents
-        file_contents = ( char* )malloc( file_size + 1 );
-
-        // Read the file's contents
-        fread( file_contents, file_size, 1, file );
-
-        // Null terminate the string
-        file_contents[ file_size ] = '\x00';
-
-        // Close the file
-        fclose( file );
+        // Read the file into a buffer
+        char* buffer = load_file(argv[1]);
 
         // Will store the number of tokens in the file
         int32_t token_count = 0;
@@ -60,7 +73,7 @@ int main(int argc, char **argv) {
         const char *error = NULL;
 
         // Digest the file
-        if (perf_lexer_digest( &lexer, file_contents, &tokens, &token_count, &error) != PERF_RES_OK)
+        if (perf_lexer_digest( &lexer, buffer, &tokens, &token_count, &error) != PERF_RES_OK)
         {
             // Print the error
             printf("Error: %s\n", error);
@@ -69,15 +82,15 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        // Free the file's contents
-        free( file_contents );
-
+        // Free the file contents buffer since we don't need it anymore
+        free(buffer);
+        
         // Loop through the tokens
         for (int idx = 0; idx < token_count; idx++)
         {
             // Print the current token
             printf("Token %d/%d: %s\n", idx, token_count, token_map[tokens[idx].type]);
-        }
+        }        
     }
 
     // Otherwise parse command line input
