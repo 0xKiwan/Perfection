@@ -501,18 +501,18 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token,
 	{
         // Check for escape character
         if (*lexer->current_ch == '\\')
-		{
+        {
             // Move to the next character.
-			lexer->current_ch++;
-			lexer->column_number++;
-		}
+            lexer->current_ch++;
+            lexer->column_number++;
+        }
 
         // Check if the string is terminated
-		else if (*lexer->current_ch == '"')
-		{
+        else if (*lexer->current_ch == '"')
+        {
             // Mark the string as terminated.
-			is_terminated = true;
-		}
+            is_terminated = true;
+        }
 
         // Skip the current character
         lexer->current_ch++;
