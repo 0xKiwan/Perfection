@@ -397,10 +397,10 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
         {
             // Move to the next character.
             lexer->column_number++;
-			lexer->current_ch++;
+            lexer->current_ch++;
 
             // Mark the number as a float.
-			is_float = true;
+            is_float = true;
         }
 
         // Otherwise, we have reached the end of the number.
