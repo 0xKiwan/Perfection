@@ -184,6 +184,7 @@ perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* to
     memcpy(token->as.str, lexer->token_start, length);
 
     // Handle keywords
+    // TODO: This is a temporary solution. We should use a hash table instead.
     for (int idx = 26; idx <= 40; idx++)
     {
         // Find the matching keyword
@@ -205,6 +206,88 @@ perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* to
             return PERF_RES_OK;
         }
     }
+
+    // Return OK result.
+    return PERF_RES_OK;
+}
+
+/**
+ * @brief Handles any numbers in the source code.
+ * 
+ * @param lexer The lexer to use.
+ * @param token The token to use.
+ * 
+ * @return PERF_RES_OK if the number was handled successfully.
+*/
+perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
+{
+    return PERF_RES_OK;
+}
+
+/**
+ * @brief Handles any strings in the source code.
+ * 
+ * @param lexer The lexer to use.
+ * @param token The token to use.
+ * 
+ * @return PERF_RES_OK if the string was handled successfully.
+*/
+perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
+{
+    // Skip the first quote
+    lexer->current_ch++;
+    lexer->column_number++;
+
+    // Used to determine if the string is terminated or not.
+    bool is_terminated = false;
+
+    // Loop until we reach either EOF or end of string.
+    while ( *lexer->current_ch != '\x00' && !is_terminated )
+	{
+        // Check for escape character
+        if ( *lexer->current_ch == '\\' )
+		{
+            // Move to the next character.
+			lexer->current_ch++;
+			lexer->column_number++;
+		}
+
+        // Check if the string is terminated
+		else if ( *lexer->current_ch == '"' )
+		{
+            // Mark the string as terminated.
+			is_terminated = true;
+		}
+
+        // Skip the current character
+        lexer->current_ch++;
+        lexer->column_number++;
+    }
+
+    // If string is unterminated out of the loop, we have an error.
+    if (!is_terminated)
+    {
+        // Return the error result.
+        return PERF_RES_LEX_ERROR;
+    }
+
+    // Calculate the length of the string ignoring the quotes.
+    int32_t length = (int32_t)(lexer->current_ch - lexer->token_start) - 2;
+
+    // Construct the token
+    token->type             = TOKEN_STRING;
+    token->line_number      = lexer->line_number;
+    token->column_number    = lexer->column_number - (int32_t)(length + 2);
+    token->as.str           = malloc(length + 1);
+
+    // Ensure the string was allocated successfully.
+    if (token->as.str == NULL) return PERF_RES_MEMORY_ALLOC_FAIL;
+
+    // Zero the allocated memory.
+    memset(token->as.str, 0, length + 1);
+
+    // Copy the string into the token.
+    memcpy(token->as.str, lexer->token_start + 1, length);
 
     // Return OK result.
     return PERF_RES_OK;
@@ -313,13 +396,21 @@ perf_result_t perf_lexer_digest(perf_lexer_t *lexer, const char* src, perf_token
             // Handle a number
             else if (char_is_numeric(ch))
             {
+                // Handle the number
+                perf_result_t parse_result = perf_lexer_handle_number(lexer, token);
 
+                // Check if the number was handled successfully.
+                if (parse_result != PERF_RES_OK) return parse_result;
             }
 
             // Handle a string
             else if (ch == '"')
             {
+                // Handle the string
+                perf_result_t parse_result = perf_lexer_handle_string(lexer, token);
 
+                // Check if the string was handled successfully.
+                if (parse_result != PERF_RES_OK) return parse_result;
             }
 
             // Handle everything else
