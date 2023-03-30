@@ -35,7 +35,7 @@ bool char_is_whitespace(char ch)
 */
 bool char_is_alphabetic(char ch)
 {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
 
 /**
@@ -47,7 +47,7 @@ bool char_is_alphabetic(char ch)
 */
 bool char_is_numeric(char ch)
 {
-	return ch >= '0' && ch <= '9';
+    return ch >= '0' && ch <= '9';
 }
 
 /**
@@ -73,16 +73,16 @@ bool char_is_alphanumeric(char ch)
 bool char_matches_integer_mode(char ch, perf_e_integer_mode_t integer_mode)
 {
     // Check if the character matches the integer mode.
-	switch (integer_mode)
-	{
-	case INT_BINARY:    return ch == '0' || ch == '1';
-	case INT_OCTAL:     return ch >= '0' && ch <= '8';
-	case INT_DECIMAL:   return ch >= '0' && ch <= '9';
-	case INT_HEX:       return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
-	}
+    switch (integer_mode)
+    {
+    case INT_BINARY:    return ch == '0' || ch == '1';
+    case INT_OCTAL:     return ch >= '0' && ch <= '8';
+    case INT_DECIMAL:   return ch >= '0' && ch <= '9';
+    case INT_HEX:       return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+    }
 
     // Return false if the integer mode is invalid.
-	return false;
+    return false;
 }
 
 /**
@@ -96,7 +96,7 @@ bool char_matches_integer_mode(char ch, perf_e_integer_mode_t integer_mode)
 perf_result_t token_array_resize(perf_token_t** out, int32_t* capacity, const char** error)
 {
     // Adjust the capacity of the token buffer.
-	*capacity = ((*capacity) < 16) ? 16 : (*capacity) * 2;
+    *capacity = ((*capacity) < 16) ? 16 : (*capacity) * 2;
 
     // Check if the token buffer is NULL.
     if (*out == NULL)
@@ -228,8 +228,8 @@ perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* to
     while (*lexer->current_ch != '\x00' && char_is_alphanumeric(*lexer->current_ch))
 	{
         // Move to the next character.
-		lexer->column_number++;
-		lexer->current_ch++;
+        lexer->column_number++;
+        lexer->current_ch++;
 	}
 
     // Calculate the length of the identifier
@@ -323,7 +323,7 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
             {
                 // Move to the next character.
                 lexer->column_number++;
-			    lexer->current_ch++;
+                lexer->current_ch++;
 
                 // No further processing needed
                 break;
@@ -331,9 +331,9 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
 
             // Handle integer mode notation
             if (*lexer->current_ch == '0' && *(lexer->current_ch + 1) != '\x00'
-				&& *(lexer->current_ch + 1) != '.' && *(lexer->current_ch + 1) != '_'
-				&& !char_is_numeric(*(lexer->current_ch + 1)))
-			{
+                && *(lexer->current_ch + 1) != '.' && *(lexer->current_ch + 1) != '_'
+                && !char_is_numeric(*(lexer->current_ch + 1)))
+            {
                 // Move to the next character.
                 lexer->current_ch++;
                 lexer->column_number++;
@@ -342,30 +342,30 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
                 switch (*lexer->current_ch)
                 {
                 case 'b':                           // Handle binary notation
-					lexer->column_number++;
-					lexer->current_ch++;
+                    lexer->column_number++;
+                    lexer->current_ch++;
 
-					integer_mode = INT_BINARY;
-					break;
-				case 'o':                           // Handle octal notation   
-					lexer->column_number++;
-					lexer->current_ch++;
+                    integer_mode = INT_BINARY;
+                    break;
+                case 'o':                           // Handle octal notation   
+                    lexer->column_number++;
+                    lexer->current_ch++;
 
-					integer_mode = INT_OCTAL;
-					break;
-				case 'x':                           // Handle hexadecimal notation
-					lexer->column_number++;
-					lexer->current_ch++;
+                    integer_mode = INT_OCTAL;
+                    break;
+                case 'x':                           // Handle hexadecimal notation
+                    lexer->column_number++;
+                    lexer->current_ch++;
 
-					integer_mode = INT_HEX;
-					break;
-				default:                            // Handle unknown notation
+                    integer_mode = INT_HEX;
+                    break;
+                default:                            // Handle unknown notation
 
                     // Set the error
                     *error = "Unknown integer notation.";
 
                     // Return lex error result.
-					return PERF_RES_LEX_ERROR;
+                    return PERF_RES_LEX_ERROR;
                 }
 
                 // Handle incomplete integer literal
@@ -374,11 +374,11 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
 
             // Check if next digit matches the integer mode
             else if (char_matches_integer_mode(*lexer->current_ch, integer_mode))
-			{
+            {
                 // Move to the next character.
-				lexer->column_number++;
-				lexer->current_ch++;
-			}
+                lexer->column_number++;
+                lexer->current_ch++;
+            }
 
             // Otherwise we have reached the end of the number.
             else break;
