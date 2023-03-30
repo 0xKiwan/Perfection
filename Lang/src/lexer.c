@@ -737,7 +737,7 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
                 perf_result_t parse_result = perf_lexer_handle_identifier(lexer, token, error);
 
                 // Check if the identifier was handled successfully.
-				if (parse_result != PERF_RES_OK) return parse_result;
+                if (parse_result != PERF_RES_OK) return parse_result;
             }
 
             // Handle a number
