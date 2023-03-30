@@ -2,6 +2,12 @@
 #define _PERFECTION_TOKEN_H
 
 /**
+ * NOTE: The token type enum, token map, and token struct are all linked.
+ * The structure must be exactly the same across all of them, if you change one, you must change the others.
+ * If not, the keyword parsing aspect of the lexer will break entirely.
+*/
+
+/**
  * Represents the type of the token.
  */
 typedef enum _perf_e_token_type_t
@@ -103,6 +109,27 @@ static const char* token_map[] = {
     "TOKEN_KEYWORD_BREAK",
     "TOKEN_SKIP",
     "TOKEN_EOF"
+};
+
+/**
+ * We can use this to map an integer to an actual keyword in the language.
+*/
+static const char* keyword_map[] = {
+    "func",
+    "var",
+    "let",
+    "const",
+    "if",
+    "else",
+    "for",
+    "while",
+    "true",
+    "false",
+    "return",
+    "do",
+    "class",
+    "continue",
+    "break"
 };
 
 /**

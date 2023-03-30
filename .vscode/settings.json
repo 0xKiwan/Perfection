@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "util.h": "c",
+        "result.h": "c",
+        "shared.h": "c",
+        "lexer.h": "c"
+    }
+}
