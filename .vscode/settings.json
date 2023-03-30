@@ -3,6 +3,7 @@
         "util.h": "c",
         "result.h": "c",
         "shared.h": "c",
-        "lexer.h": "c"
+        "lexer.h": "c",
+        "parser.h": "c"
     }
 }

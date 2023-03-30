@@ -2,6 +2,8 @@
 #include "../inc/result.h"
 #include "../inc/token.h"
 #include "../inc/lexer.h"
+#include "../inc/ast.h"
+#include "../inc/parser.h"
 
 
 /**
@@ -56,6 +58,19 @@ int main(int argc, char **argv) {
 
     // Create a lexer
     perf_lexer_t lexer;
+    perf_parser_t parser;
+
+    // Will store the error message for the lexer
+    const char* lexer_error = NULL;
+
+    // Initialize the lexer
+    perf_lexer_init(&lexer);
+
+    // Will store the error message for the parser
+    const char* parser_error = NULL;
+
+    // Initialize the parser
+    perf_parser_init(&parser, &lexer, &parser_error);
 
     // Check if we should parse file or cli
     if ( argc > 1 ) 
@@ -73,7 +88,26 @@ int main(int argc, char **argv) {
         const char *error = NULL;
 
         // Digest the file
-        if (perf_lexer_digest( &lexer, buffer, &tokens, &token_count, &error) != PERF_RES_OK)
+        if (perf_lexer_digest( &lexer, buffer, &tokens, &token_count, &lexer_error) != PERF_RES_OK)
+        {
+            // Print the error
+            printf("Error: %s\n", lexer_error);
+
+            // Exit the program with an error
+            return 1;
+        }
+
+        // Free the file contents buffer since we don't need it anymore
+        free(buffer);
+
+        // Will store the number of nodes in the AST
+        int32_t ast_node_count = 0;
+
+        // Will store the AST nodes
+        perf_parser_node_t *ast_nodes = NULL;
+        
+        // DIgest the tokens into an AST
+        if (perf_parser_digest(&parser, tokens, token_count, &ast_nodes, &ast_node_count, &parser_error) != PERF_RES_OK)
         {
             // Print the error
             printf("Error: %s\n", error);
@@ -82,15 +116,8 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        // Free the file contents buffer since we don't need it anymore
-        free(buffer);
-        
-        // Loop through the tokens
-        for (int idx = 0; idx < token_count; idx++)
-        {
-            // Print the current token
-            printf("Token %d/%d: %s\n", idx, token_count, token_map[tokens[idx].type]);
-        }        
+        // Print how many nodes were in the AST
+        printf("AST Node Count: %d\n", ast_node_count);
     }
 
     // Otherwise parse command line input

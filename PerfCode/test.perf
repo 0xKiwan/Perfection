@@ -1,13 +1,7 @@
 
 
 
-func main(x, y, z)
-{
-    let x = 32;
-    let y = 64;
-    let z = x / y;
-    while (true)
-    {
-        var b = 92;
-    }
-}
+
+let x = 32;
+let y = 64;
+let z = x / y;

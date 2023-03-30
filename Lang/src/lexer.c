@@ -771,6 +771,12 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
         }
     }
 
+    // Add the EOF token
+    perf_token_t *token = &token_array[num_tokens++];
+    token->type             = TOKEN_EOF;
+    token->line_number      = lexer->line_number;
+    token->column_number    = lexer->column_number;
+
     // Output the number of tokens
     *token_count = num_tokens;
 
