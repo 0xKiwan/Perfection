@@ -3,28 +3,86 @@
 #include "../inc/token.h"
 #include "../inc/lexer.h"
 
-// Implementation for util.h char_is_whitespace
+/**
+ * Used to determine the integer mode of an int literal.
+*/
+typedef enum _perf_e_integer_mode_t
+{
+    INT_BINARY  = 2,
+    INT_OCTAL   = 8,
+    INT_DECIMAL = 10,
+    INT_HEX     = 16
+} perf_e_integer_mode_t;
+
+/**
+ * @brief Determines if the given character is whitespace.
+ * 
+ * @param ch The character to check.
+ * 
+ * @return true if the character is whitespace, false otherwise.
+*/
 bool char_is_whitespace(char ch) 
 {
     return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 }
 
-// Implementation for util.h char_is_alphabetic
+/**
+ * @brief Determines if the given character is alphabetic.
+ * 
+ * @param ch The character to check.
+ * 
+ * @return true if the character is alphabetic, false otherwise.
+*/
 bool char_is_alphabetic(char ch)
 {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
 
-// Implementation for util.h char_is_numeric`
+/**
+ * @brief Determines if the given character is numeric.
+ * 
+ * @param ch The character to check.
+ * 
+ * @return true if the character is numeric, false otherwise.
+*/
 bool char_is_numeric(char ch)
 {
 	return ch >= '0' && ch <= '9';
 }
 
-// Implementation for util.h char_is_alphanumeric
+/**
+ * @brief Determines if the given character is alphanumeric.
+ * 
+ * @param ch The character to check.
+ * 
+ * @return true if the character is alphanumeric, false otherwise.
+*/
 bool char_is_alphanumeric(char ch)
 {
     return char_is_alphabetic(ch) || char_is_numeric(ch);
+}
+
+/**
+ * @brief Determines if the given character matches the given integer mode.
+ * 
+ * @param ch The character to check.
+ * @param integer_mode The integer mode to check against.
+ * 
+ * @return true if the character matches the integer mode, false otherwise.
+*/
+bool char_matches_integer_mode(char ch, perf_e_integer_mode_t integer_mode)
+{
+    // Check if the character matches the integer mode.
+	switch (integer_mode)
+	{
+	case INT_BINARY:    return ch == '0' || ch == '1';
+	case INT_OCTAL:     return ch >= '0' && ch <= '8';
+	case INT_DECIMAL:   return ch >= '0' && ch <= '9';
+	case INT_HEX:       return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+	}
+
+    // Return false if the integer mode is invalid.
+	return false;
 }
 
 /**
@@ -158,7 +216,7 @@ perf_result_t perf_lexer_handle_comment(perf_lexer_t *lexer, bool ds_comment)
 perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* token)
 {
     // Loop until we reach the end of the identifier, or EOF.
-    while ( *lexer->current_ch != '\x00' && char_is_alphanumeric( *lexer->current_ch ) )
+    while (*lexer->current_ch != '\x00' && char_is_alphanumeric(*lexer->current_ch))
 	{
         // Move to the next character.
 		lexer->column_number++;
@@ -221,6 +279,162 @@ perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* to
 */
 perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
 {
+    // Used to determine if the number is a float or not
+    bool is_float = false;
+
+    // Used to determine the integer mode of the number.
+    perf_e_integer_mode_t integer_mode = INT_DECIMAL;
+
+    // Loop until we reach the end of the number, or EOF.
+    while (*lexer->current_ch != '\x00')
+    {
+        // Handle digit seperators
+        if (*lexer->current_ch == '_')
+        {
+            // Move to the next character.
+            lexer->current_ch++;
+            lexer->column_number++;
+
+            // Continue to the next iteration.
+            continue;
+        }
+
+        // Check we are at the start of the token
+        if (lexer->current_ch == lexer->token_start)
+        {
+            // Check first for a single zero. This fixes an issue with defining zero numbers with our integer mode check.
+            if (*lexer->current_ch == '0' && (*(lexer->current_ch + 1) == ' ' || *(lexer->current_ch + 1) == ';'))
+            {
+                continue;
+            }
+
+            // Handle integer mode notation
+            if (*lexer->current_ch == '0' && *(lexer->current_ch + 1) != '\x00'
+				&& *(lexer->current_ch + 1) != '.' && *(lexer->current_ch + 1) != '_'
+				&& !char_is_numeric(*(lexer->current_ch + 1)))
+			{
+                // Move to the next character.
+                lexer->current_ch++;
+                lexer->column_number++;
+
+                // Handle notations
+                switch (*lexer->current_ch)
+                {
+                case 'b':                           // Handle binary notation
+					lexer->column_number++;
+					lexer->current_ch++;
+
+					integer_mode = INT_BINARY;
+					break;
+				case 'o':                           // Handle octal notation   
+					lexer->column_number++;
+					lexer->current_ch++;
+
+					integer_mode = INT_OCTAL;
+					break;
+				case 'x':                           // Handle hexadecimal notation
+					lexer->column_number++;
+					lexer->current_ch++;
+
+					integer_mode = INT_HEX;
+					break;
+				default:                            // Handle unknown notation
+					return PERF_RES_LEX_ERROR;
+                }
+
+                // Handle incomplete integer literal
+                if (*lexer->current_ch == '\x00' || !char_matches_integer_mode(*lexer->current_ch, integer_mode)) return PERF_RES_LEX_ERROR;
+            }
+
+            // Check if next digit matches the integer mode
+            else if (char_matches_integer_mode(*lexer->current_ch, integer_mode))
+			{
+                // Move to the next character.
+				lexer->column_number++;
+				lexer->current_ch++;
+			}
+
+            // Otherwise we have reached the end of the number.
+            else break;
+        }
+
+        // Check if there's more digits to parse.
+        else if (char_matches_integer_mode(*lexer->current_ch, integer_mode))
+        {
+            // Move to the next character.
+            lexer->column_number++;
+            lexer->current_ch++;
+        }
+
+        // Check for a floating point number.
+        else if (integer_mode == INT_DECIMAL && !is_float && *lexer->current_ch == '.')
+        {
+            // Move to the next character.
+            lexer->column_number++;
+			lexer->current_ch++;
+
+            // Mark the number as a float.
+			is_float = true;
+        }
+
+        // Otherwise, we have reached the end of the number.
+        else break;
+    }
+
+    // Calculate the length of the number.
+    size_t literal_length = (size_t)(lexer->current_ch - lexer->token_start);
+
+    // Check if we should skip integer notation
+    size_t str_literal_offset = integer_mode == INT_DECIMAL ? 0 : 2;
+
+    // Calculate the size of the string literal without the integer notation.
+	size_t literal_str_size = (size_t)literal_length - str_literal_offset;
+
+    // Will store the size of the literal without underscores.
+	size_t size_without_uss = literal_str_size;
+
+    // Check for a valid floating point number
+    if (is_float && literal_str_size == 2) return PERF_RES_LEX_ERROR;
+
+    // Loop through the string
+    for ( size_t i = 0; i < literal_str_size; i++ )
+	{
+        // Check for an underscore, and if so, decrement the size.
+		if (*(lexer->token_start + i + str_literal_offset) == '_') size_without_uss--;
+	}
+
+    // Allocate space for the raw integer literal
+    char *literal_str = malloc( size_without_uss + 1 );
+
+    // Check if the allocation failed.
+    if (literal_str == NULL) return PERF_RES_MEMORY_ALLOC_FAIL;
+
+    // Zero the memory.
+    memset(literal_str, 0, size_without_uss + 1);
+
+    // Loop through the string
+    for ( size_t i = 0, j = 0; i < literal_str_size; i++ )
+    {
+        // If the char is not an underscore, we can store it.
+        if (*(lexer->token_start + i + str_literal_offset) != '_')
+        {
+            // Store the character.
+            *(literal_str + (j++)) = *(lexer->token_start + i + str_literal_offset);
+        }
+    }
+
+    // Construct the token.
+    token->type             = is_float ? TOKEN_NUMBER : TOKEN_INTEGER;
+    token->line_number      = lexer->line_number;
+    token->column_number    = lexer->column_number;
+
+    // Check if the number is a float, and parse it.
+    if (is_float) token->as.number = strtod(literal_str, NULL);
+
+    // Otherwise, parse it as an integer.
+    else token->as.integer = strtoull(literal_str, NULL, (int)integer_mode);
+
+    // Return OK result.
     return PERF_RES_OK;
 }
 
@@ -242,10 +456,10 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
     bool is_terminated = false;
 
     // Loop until we reach either EOF or end of string.
-    while ( *lexer->current_ch != '\x00' && !is_terminated )
+    while (*lexer->current_ch != '\x00' && !is_terminated)
 	{
         // Check for escape character
-        if ( *lexer->current_ch == '\\' )
+        if (*lexer->current_ch == '\\')
 		{
             // Move to the next character.
 			lexer->current_ch++;
@@ -253,7 +467,7 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
 		}
 
         // Check if the string is terminated
-		else if ( *lexer->current_ch == '"' )
+		else if (*lexer->current_ch == '"')
 		{
             // Mark the string as terminated.
 			is_terminated = true;
@@ -345,7 +559,7 @@ perf_result_t perf_lexer_digest(perf_lexer_t *lexer, const char* src, perf_token
         }
 
         // Check for a comment
-        else if (ch == '/' && (*(lexer->current_ch + 1) == '/' || *( lexer->current_ch + 1 ) == '*'))
+        else if (ch == '/' && (*(lexer->current_ch + 1) == '/' || *(lexer->current_ch + 1) == '*'))
         {
             // Used to determine if it's a single line comment or a multi-line comment.
             bool ds_comment = *(lexer->current_ch + 1) == '/';
@@ -387,10 +601,10 @@ perf_result_t perf_lexer_digest(perf_lexer_t *lexer, const char* src, perf_token
             if (char_is_alphabetic(ch))
             {
                 // Handle the identifier
-                perf_result_t parse_result = perf_lexer_handle_identifier( lexer, token);
+                perf_result_t parse_result = perf_lexer_handle_identifier(lexer, token);
 
                 // Check if the identifier was handled successfully.
-				if ( parse_result != PERF_RES_OK ) return parse_result;
+				if (parse_result != PERF_RES_OK) return parse_result;
             }
 
             // Handle a number
