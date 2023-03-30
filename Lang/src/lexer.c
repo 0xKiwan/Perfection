@@ -414,10 +414,10 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
     size_t str_literal_offset = integer_mode == INT_DECIMAL ? 0 : 2;
 
     // Calculate the size of the string literal without the integer notation.
-	size_t literal_str_size = (size_t)literal_length - str_literal_offset;
+    size_t literal_str_size = (size_t)literal_length - str_literal_offset;
 
     // Will store the size of the literal without underscores.
-	size_t size_without_uss = literal_str_size;
+    size_t size_without_uss = literal_str_size;
 
     // Check for a valid floating point number
     if (is_float && literal_str_size == 2) 
@@ -431,10 +431,10 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
 
     // Loop through the string
     for ( size_t i = 0; i < literal_str_size; i++ )
-	{
+    {
         // Check for an underscore, and if so, decrement the size.
-		if (*(lexer->token_start + i + str_literal_offset) == '_') size_without_uss--;
-	}
+        if (*(lexer->token_start + i + str_literal_offset) == '_') size_without_uss--;
+    }
 
     // Allocate space for the raw integer literal
     char *literal_str = malloc( size_without_uss + 1 );
@@ -442,7 +442,6 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token,
     // Check if the allocation failed.
     if (literal_str == NULL) 
     {
-
         // Set the error
         *error = "Failed to allocate memory for integer literal.";
 
@@ -498,7 +497,7 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token,
 
     // Loop until we reach either EOF or end of string.
     while (*lexer->current_ch != '\x00' && !is_terminated)
-	{
+    {
         // Check for escape character
         if (*lexer->current_ch == '\\')
         {
