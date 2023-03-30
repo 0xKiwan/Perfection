@@ -550,31 +550,20 @@ perf_result_t perf_lexer_handle_symbol(perf_lexer_t* lexer, perf_token_t* token)
 
                 // Set the 2x length flag.
                 is_2x_length = true;
-
-                // Break out of the loop.
-                break;
             }
         }
 
         // Check if we have a 1x length symbol
         else if (strlen(sym) == 1)
         {
-            // Check for a match against the current character.
-            if (ch == sym[0])
-            {
-                // Set the match index.
-                match_idx = idx;
-
-                // Break out of the loop.
-                break;
-            }
+            // Check for a match against the current character. & set the match index.
+            if (ch == sym[0]) match_idx = idx;
         }
     }
 
     // Check if we have a match
     if (match_idx != -1)
     {
-
         // Construct the token
         token->type             = (perf_e_token_type_t)match_idx;
         token->line_number      = lexer->line_number;
@@ -584,7 +573,7 @@ perf_result_t perf_lexer_handle_symbol(perf_lexer_t* lexer, perf_token_t* token)
         lexer->current_ch++;
         lexer->column_number++;
 
-        // Check if the symbol is 2x length
+        // Check if the symbol is 2x length and move to the next character.
         if (is_2x_length)
         {
             // Move to the next character.
