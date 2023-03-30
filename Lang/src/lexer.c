@@ -93,7 +93,7 @@ bool char_matches_integer_mode(char ch, perf_e_integer_mode_t integer_mode)
  * 
  * @return PERF_RES_OK if the token array was resized successfully.
 */
-perf_result_t token_array_resize(perf_token_t** out, int32_t* capacity)
+perf_result_t token_array_resize(perf_token_t** out, int32_t* capacity, const char** error)
 {
     // Adjust the capacity of the token buffer.
 	*capacity = ((*capacity) < 16) ? 16 : (*capacity) * 2;
@@ -107,6 +107,9 @@ perf_result_t token_array_resize(perf_token_t** out, int32_t* capacity)
         // Check if the memory allocation failed.
         if (*out == NULL)
         {
+            // Set the error
+            *error = "Token array resize memory allocation failed.";
+
             // Return memory allocation failure result.
             return PERF_RES_MEMORY_ALLOC_FAIL;
         }
@@ -121,6 +124,9 @@ perf_result_t token_array_resize(perf_token_t** out, int32_t* capacity)
         // Check if the memory allocation failed.
         if (*out == NULL)
         {
+             // Set the error
+            *error = "Token array resize memory reallocation failed.";
+
             // Return memory allocation failure result.
             return PERF_RES_MEMORY_ALLOC_FAIL;
         }
@@ -152,7 +158,7 @@ perf_result_t perf_lexer_init(perf_lexer_t *lexer)
  * 
  * @return PERF_RES_OK if the comment was handled successfully.
 */
-perf_result_t perf_lexer_handle_comment(perf_lexer_t *lexer, bool ds_comment)
+perf_result_t perf_lexer_handle_comment(perf_lexer_t *lexer, bool ds_comment, const char** error)
 {
     // Used to determine if the comment is terminated or not.
     bool is_terminated = ds_comment;
@@ -196,7 +202,8 @@ perf_result_t perf_lexer_handle_comment(perf_lexer_t *lexer, bool ds_comment)
     // If comment is unterminated out of the loop, we have an error.
     if (!is_terminated)
     {
-        // Print the error message.
+        // Set the error
+        *error = "Unterminated string.";
         
 
         // Return the error result.
@@ -215,7 +222,7 @@ perf_result_t perf_lexer_handle_comment(perf_lexer_t *lexer, bool ds_comment)
  * 
  * @return PERF_RES_OK if the identifier was handled successfully.
 */
-perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* token)
+perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* token, const char** error)
 {
     // Loop until we reach the end of the identifier, or EOF.
     while (*lexer->current_ch != '\x00' && char_is_alphanumeric(*lexer->current_ch))
@@ -235,7 +242,14 @@ perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* to
     token->as.str           = malloc(length + 1);
 
     // Ensure the string was allocated successfully.
-    if (token->as.str == NULL) return PERF_RES_MEMORY_ALLOC_FAIL;
+    if (token->as.str == NULL) 
+    {
+        // Set the error
+        *error = "Failed to allocate memory for identifier.";
+        
+        // Return memory allocation failure result.
+        return PERF_RES_MEMORY_ALLOC_FAIL;
+    }
 
     // Zero the allocated memory.
     memset(token->as.str, 0, length + 1);
@@ -279,7 +293,7 @@ perf_result_t perf_lexer_handle_identifier(perf_lexer_t* lexer, perf_token_t* to
  * 
  * @return PERF_RES_OK if the number was handled successfully.
 */
-perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
+perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token, const char** error)
 {
     // Used to determine if the number is a float or not
     bool is_float = false;
@@ -346,6 +360,11 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
 					integer_mode = INT_HEX;
 					break;
 				default:                            // Handle unknown notation
+
+                    // Set the error
+                    *error = "Unknown integer notation.";
+
+                    // Return lex error result.
 					return PERF_RES_LEX_ERROR;
                 }
 
@@ -401,7 +420,14 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
 	size_t size_without_uss = literal_str_size;
 
     // Check for a valid floating point number
-    if (is_float && literal_str_size == 2) return PERF_RES_LEX_ERROR;
+    if (is_float && literal_str_size == 2) 
+    {
+        // Set the error
+        *error = "Invalid float literal.";
+
+        // Return lex error result.   
+        return PERF_RES_LEX_ERROR;
+    }
 
     // Loop through the string
     for ( size_t i = 0; i < literal_str_size; i++ )
@@ -414,7 +440,15 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
     char *literal_str = malloc( size_without_uss + 1 );
 
     // Check if the allocation failed.
-    if (literal_str == NULL) return PERF_RES_MEMORY_ALLOC_FAIL;
+    if (literal_str == NULL) 
+    {
+
+        // Set the error
+        *error = "Failed to allocate memory for integer literal.";
+
+        // Return memory allocation fail result.
+        return PERF_RES_MEMORY_ALLOC_FAIL;
+    }
 
     // Zero the memory.
     memset(literal_str, 0, size_without_uss + 1);
@@ -453,7 +487,7 @@ perf_result_t perf_lexer_handle_number(perf_lexer_t *lexer, perf_token_t* token)
  * 
  * @return PERF_RES_OK if the string was handled successfully.
 */
-perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
+perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token, const char** error)
 {
     // Skip the first quote
     lexer->current_ch++;
@@ -488,6 +522,9 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
     // If string is unterminated out of the loop, we have an error.
     if (!is_terminated)
     {
+        // Set the error
+        *error = "Unterminated string.";
+
         // Return the error result.
         return PERF_RES_LEX_ERROR;
     }
@@ -502,7 +539,14 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
     token->as.str           = malloc(length + 1);
 
     // Ensure the string was allocated successfully.
-    if (token->as.str == NULL) return PERF_RES_MEMORY_ALLOC_FAIL;
+    if (token->as.str == NULL) 
+    {
+        // Set the error
+        *error = "Failed to allocate memory for string literal.";
+
+        // Return memory allocation fail result.
+        return PERF_RES_MEMORY_ALLOC_FAIL;
+    }
 
     // Zero the allocated memory.
     memset(token->as.str, 0, length + 1);
@@ -522,7 +566,7 @@ perf_result_t perf_lexer_handle_string(perf_lexer_t* lexer, perf_token_t* token)
  * 
  * @return PERF_RES_OK if the symbol was handled successfully.
 */
-perf_result_t perf_lexer_handle_symbol(perf_lexer_t* lexer, perf_token_t* token)
+perf_result_t perf_lexer_handle_symbol(perf_lexer_t* lexer, perf_token_t* token, const char** error)
 {
     // Get the current character.
     char ch = *lexer->current_ch;
@@ -581,9 +625,16 @@ perf_result_t perf_lexer_handle_symbol(perf_lexer_t* lexer, perf_token_t* token)
             lexer->column_number++;
         }
 
+
         // Return OK result.
         return PERF_RES_OK;
     }
+
+    // Set the error
+    *error = "Invalid symbol.";
+    
+    // Append the invalid symbol to the error.
+    strncat((char*)(*error), &ch, 1);
 
     // Return the error result.
     return PERF_RES_LEX_ERROR;
@@ -591,7 +642,7 @@ perf_result_t perf_lexer_handle_symbol(perf_lexer_t* lexer, perf_token_t* token)
 
 
 // Implementation for lexer.h perf_lexer_digest
-perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token_t** tokens, int32_t* token_count)
+perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token_t** tokens, int32_t* token_count, const char** error)
 {
     // Save ptr to the start of the source code
     lexer->src = src;
@@ -604,18 +655,21 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
     perf_token_t *token_array = NULL;
 
     // Allocate the token array
-    perf_result_t result = token_array_resize(&token_array, &token_capacity);
+    perf_result_t result = token_array_resize(&token_array, &token_capacity, error);
 
     // Check if the token array was resized successfully.
     if (result != PERF_RES_OK)
     {
+        // Set the error.
+        *error = "Failed to allocate memory for token array.";
+
         // Return the result.
         return result;
     }
 
     // Update our output buffer & token count ptrs with the token array.
-    *tokens = token_array;
-    *token_count = num_tokens;
+    *tokens         = token_array;
+    *token_count    = num_tokens;
 
     // Set up the 'current_ch' pointer to the start of the source code.
     lexer->current_ch = src;
@@ -648,7 +702,7 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
             bool ds_comment = *(lexer->current_ch + 1) == '/';
 
             // Skip the comment characters.
-            perf_result_t res = perf_lexer_handle_comment(lexer, ds_comment);
+            perf_result_t res = perf_lexer_handle_comment(lexer, ds_comment, error);
 
             // Check if the comment was handled successfully.
             if (res != PERF_RES_OK) return res;
@@ -664,17 +718,13 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
             if (num_tokens >= (token_capacity * 0.75))
             {
                 // Resize the token array.
-                result = token_array_resize(&token_array, &token_capacity);
+                result = token_array_resize(&token_array, &token_capacity, error);
 
                 // Check if the token array was resized successfully.
-                if (result != PERF_RES_OK)
-                {
-                    // Return the result.
-                    return result;
-                }
+                if (result != PERF_RES_OK) return result;
 
-                *tokens = token_array;
-                *token_count = num_tokens;
+                *tokens         = token_array;
+                *token_count    = num_tokens;
             }
 
             // Get a pointer to the next token
@@ -684,7 +734,7 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
             if (char_is_alphabetic(ch))
             {
                 // Handle the identifier
-                perf_result_t parse_result = perf_lexer_handle_identifier(lexer, token);
+                perf_result_t parse_result = perf_lexer_handle_identifier(lexer, token, error);
 
                 // Check if the identifier was handled successfully.
 				if (parse_result != PERF_RES_OK) return parse_result;
@@ -694,7 +744,7 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
             else if (char_is_numeric(ch))
             {
                 // Handle the number
-                perf_result_t parse_result = perf_lexer_handle_number(lexer, token);
+                perf_result_t parse_result = perf_lexer_handle_number(lexer, token, error);
 
                 // Check if the number was handled successfully.
                 if (parse_result != PERF_RES_OK) return parse_result;
@@ -704,7 +754,7 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
             else if (ch == '"')
             {
                 // Handle the string
-                perf_result_t parse_result = perf_lexer_handle_string(lexer, token);
+                perf_result_t parse_result = perf_lexer_handle_string(lexer, token, error);
 
                 // Check if the string was handled successfully.
                 if (parse_result != PERF_RES_OK) return parse_result;
@@ -714,16 +764,19 @@ perf_result_t perf_lexer_digest(perf_lexer_t* lexer, const char* src, perf_token
             else
             {
                 // Handle the symbol
-                perf_result_t parse_result = perf_lexer_handle_symbol(lexer, token);
+                perf_result_t parse_result = perf_lexer_handle_symbol(lexer, token, error);
 
                 // Check if the symbol was handled successfully.
                 if (parse_result != PERF_RES_OK) return parse_result;
             }
-
-            // Print the token
-            printf("Token: %s\n", token_map[token->type]);
         }
     }
+
+    // Output the number of tokens
+    *token_count = num_tokens;
+
+    // Output the token array
+    *tokens = token_array;
 
     // Return OK result
     return PERF_RES_OK;

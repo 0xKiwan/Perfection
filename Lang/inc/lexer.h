@@ -28,7 +28,7 @@ perf_result_t perf_lexer_init(perf_lexer_t *lexer);
 
  * @return PERF_RES_OK if the source code was parsed successfully.
  */
-perf_result_t perf_lexer_digest(perf_lexer_t *lexer, const char* src, perf_token_t **tokens, int32_t *token_count);
+perf_result_t perf_lexer_digest(perf_lexer_t *lexer, const char* src, perf_token_t **tokens, int32_t *token_count, const char** error);
 
 /**
  * @brief Prints out the error message.
